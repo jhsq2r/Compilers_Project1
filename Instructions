@@ -1,0 +1,144 @@
+For this project, to submit use:
+
+/home/hauschildm/submitProject/submit_cs4280_P1 [folderorfilenamewhereprojectis]
+
+ 
+
+ 
+
+ 
+
+ 
+
+Implement scanner for the provided lexical definitions.
+
+The scanner is embedded and thus it will return one token every time it is called. Since the parser is not available yet, we will use a tester program to call the scanner.
+
+The scanner could be implemented as
+
+Plain string reader - read strings separated by spaces - (70 points) assuming
+all tokens must be separated by spaces
++5 for counting lines + chars
+As above but tokens do not have to be separated by WS (80 points)
++5 for counting lines + chars
+FSA table + driver (100 points)
+You must have the README.txt file with your submission stating on the first line which option you are using: 1, 2, or 3, and if 3 then include information where the FSA table is and which function is the driver. If this information is missing, the project will be graded under option 1
+Implement a token as a triplet {tokenID, tokenInstance, line# and char#} (or pair if no processing line numbers)
+Dont forget EOFtk token at the end
+Implement the scanner in a separate file with basename "scanner"
+For testing purposes, the scanner will be tested using a testing driver implemented in the the same scanner file or in a file with basename "testScanner". You need to implement your own tester and include as a part of the project. This tester will ask the scanner for one token at a time and display the token to the screen, one per line, including information (descriptive) on what token class, what token instance, and what line, if applicable.
+This is just 
+while token (token=scanner() != eofTk())
+  print descriptive token  followed by token instance or nothing if no instance followed by line number if processing followed by \n
+Invocation:
+    scanner [file]
+to read from stdin or file file 
+Arguments are the same as P0
+Wrong invocations may not be graded
+Dont confuse executable name with file name with function name
+Grading rubric
+10 points for architecture/style regardless of implementation method
+5 points for stdin (so can handle redirected input, such as doing ./scanner < inputfile
+10 points for handling invocation and execution errors
+remaining points for properly recognizing/displaying tokens
+You must have the following: (C++ or Java handle similarly) 
+types including token type in token.h
+implement scanner in scanner.c and scanner.h
+implement the tester in another file testScanner.c and testScanner.h or in the scanner file
+main.c processing the arguments (as in P0) then calling testScanner() function with interface and preparation as needed.
+
+P1: Lexical definitions
+Case sensitive
+Each scanner error should display "SCANNER ERROR: " followed by details including the line number and character count where the error occurred.
+Alphabet
+all English letters (upper and lower), digits, plus the extra characters as shown below, plus WS
+No other characters allowed and they should generate errors
+Identifiers
+begin with an upper or lower case letter
+continue with any number of letters (uppercase or lowercase), underscores or digits, 8 significant total
+you may assume no identifier is longer than 8 characters (in testing). That means that your project will only be tested on my end with a maximum of 8 character identifiers. You can choose to support greater length if you want.
+Keywords (reserved, suggested individual tokens)
+start stop while repeat until label return cin cout tape jump if then pick create set func 
+Operators and delimiters group (all single character except ==  := =!= || && )
+=  <  > == =!= : :=  +  -  *  /   ^  . (  ) , { } ; [ ] || &&
+Integers
+any sequence of decimal digits, no sign, no decimal point, up to 8 significant
+you may assume no number longer than 8 characters (in testing)
+Comments start with // and turn the rest of the line into a comment.
+
+P1: Implementation Suggestions
+Token is a triplet {tokenID, tokenInstance, lineNum.charNum} (if option with line numbers) .
+
+tokenID can be enumeration (better) or symbolic constant (worse)
+tokenInstance can be a string or can be some reference to a string table
+the triplet can be struct
+For example, {ifTK,"if",4.7} is the ifTK gotten from the "if" keyword that appeared on character 7 of line 4.
+Suggestions for the string reader option #1 which assumes all tokens separated by spaces
+Implement scanner as 'scanf("%s",data)' and then processing data as below
+if starts with lower case letter then it is identifier but check against keywords
+if starts with a digit then it is an integer token
+then it must be operator or delimiter, you may use one group or look what it is and split various tokens
+this could be easily done through an associative array
+Suggestions for the FA option
+File can be opened and lookahead character can be set explicitly before the first call to the scanner for the first token
+Have the scanner not read directly from the file but from a filter. The filter would count lines, skip over spaces and comments, construct string of characters for the current token, and return the column number in the table corresponding to the character
+Represent the 2-d array for the FSA as array of integers
+0, 1, etc would be states/rows
+-1, -2, etc could be different errors
+1001, 1002, etc could be final states recognizing different tokens
+Recognize keywords as identifiers in the automaton, then do table lookup
+Comments
+Can be handled as a filter when the scanner reads from the source (skip over)
+Or in FSA design (more complex)
+Architecture
+Scanner can read from the source input file by a FILTER
+skip over comments
+convert the character to column number in the transition table
+count lines
+Scanner recognizes keywords as identifiers
+must have post processor to check identifier for keyword
+To print tokens I would suggest an array of strings describing the tokens, listed in the same order as the tokenID enumeration. For example:
+
+  enum tokenID {IDENT_tk, NUM_tk, KW_tk, etc};
+ string tokenNames[] ={"Identifier", "Number", "Keyword", etc};
+ struct token { tokenID, string, float};
+Then printing tokenNames[tokenID] will print the token description.
+
+To test our project, we want to start and do it incrementally. So first, test it for valid identifiers:
+
+a b
+Dog
+start
+dog_
+ca_t
+I would suggest another file that has at least one invalid identifier. For example, something that starts with an underscore.
+
+You then want to test for a file that has a mix of identifiers and all the keywords and make sure it identifiers the identifiers and the keywords separately.
+
+dog
+start stop while repeat until label return cin cout tape jump if then pick create set func
+horse
+Now that you have it handling the keywords, go with the numbers. Can intermix with identifiers if you have those working. Make sure to test with and without space
+
+1dog234 cat37 89horse
+1 dog 234cat 3789 horse
+Them move on to the operators, I would suggest an easy one like ;
+
+;
+While of course you can mix it up with other tokens you already have working, it can get hard to see if you identify the correct thing amongst a ton of other tokens.
+
+Gradually add operators until you can try and give it all of them, which it should identify. Make sure to test with no space between them:
+
+= <>===!=::=+-*/^.(),{};[]||&&
+At this point you can start intermixing them, trying different combinations to make sure that everything seems to work.
+
+main
+start
+// watch out for werewolf horse archers
+label poll:if ( dog == werewolf &&horse<=mongol)
+   jump einstein 5700
+while ( cat =!= dog );  
+label 5700einstein
+func repeatuntil [ pick ;greatwall]
+stop
+Note that this is just a layout for testing. You are going to need to create your own testcases. It is a good idea to keep these around so you can make sure and test in case you end up having to fix an issue that your scanner has later.
