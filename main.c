@@ -14,9 +14,6 @@ void help(){
 
 int main(int argc, char** argv) {
 
-        testFunction();
-        return 0;
-
         FILE *file;
         char buffer[100];
 
@@ -57,8 +54,15 @@ int main(int argc, char** argv) {
         //ignore comments(to keep line# and char# integrity)
         //scanner takes in file and returns linked list of tokens
         //function to print linked list
+        FILE *filterfile;
+        filterfile = fopen("filteredFile.txt", "w+");
+        filter(file,filterfile);
+        fseek(filterfile, 0, SEEK_SET);
+        scanner(filterfile);
 
         fclose(file);
+        fclose(filterfile);
 
         return;
 }
+
