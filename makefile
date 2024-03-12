@@ -14,3 +14,5 @@ scanner.o: scanner.c token.h scanner.h
 
 clean:
         rm -f Project1 *.o
+        rm -f filteredFile.txt
+        rm -f tempfile.txt
