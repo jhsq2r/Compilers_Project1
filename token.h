@@ -4,8 +4,8 @@
 struct Token {
         char *idTk;
         char *tokenInstance;
-        char *lineCharNum;
-        struct Token *next;
+        int lineNum;
+        int charNum;
 };
 
 #endif
