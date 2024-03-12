@@ -3,6 +3,7 @@
 
 #include "token.h"
 
-void testFunction();
+void filter(FILE *dirtyfile, FILE *cleanfile);
+void scanner(FILE *file);
 
 #endif
