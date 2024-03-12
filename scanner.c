@@ -2,16 +2,42 @@
 #include<stdlib.h>
 #include<unistd.h>
 #include<ctype.h>
+#include<string.h>
 #include"scanner.h"
 
 enum TokenType {
         INT_TK = 1001,
         IDENT_TK = 1002,
         OP_TK = 1003,
-        ERROR_TK = -1,
+        ERROR_TK = 100,
         EOF_TK = 1004,
         KW_TK = 1005
 };
+
+void printToken(int tkNum, char* word, int lineNum, int startPos){
+
+        struct Token* tempToken = (struct Token*)malloc(sizeof(struct Token));
+
+        if(tkNum == INT_TK){
+                tempToken->idTk = "INT_TK";
+        }else if(tkNum == IDENT_TK){
+                tempToken->idTk = "IDENT_TK";
+        }else if(tkNum == OP_TK){
+                tempToken->idTk = "OP_TK";
+        }else if(tkNum == KW_TK){
+                tempToken->idTk = "KW_TK";
+        }else if(tkNum == EOF_TK){
+                tempToken->idTk = "EOF_TK";
+        }
+
+        tempToken->tokenInstance = strdup(word);
+        tempToken->lineNum = lineNum;
+        tempToken->charNum = startPos;
+
+        printf("Token ID: %s, Token: %s, at %d.%d\n", tempToken->idTk, tempToken->tokenInstance, tempToken->lineNum, tempToken->charNum);
+
+        free(tempToken);
+}
 
 enum State {
         S1 = 0,
@@ -26,38 +52,40 @@ enum State {
 
 const char *const specialChar[] = {
         "=","<",">",":",";","+","-","*","/","^",
-        ".","(",")",",","{","}","[","]","|","&"
+        ".","(",")",",","{","}","[","]","|","&","!"
 };
 
+int isSpecialChar(char ch){
+        int x;
+        for(x = 0; x < 21; x++){
+                if(*specialChar[x] == ch){
+                        return x;
+                }
+        }
+        return -1;
+}
 
 const char *const IDENTIFIER = "ID_TK";
 const char *const INTEGER = "INT_TK";
-
-const char *const KW0 = "START_TK";
-const char *const KW1 = "STOP_TK";
-const char *const KW2 = "WHILE_TK";
-const char *const KW3 = "REPEAT_TK";
-const char *const KW4 = "UNTIL_TK";
-const char *const KW5 = "LABEL_TK";
-const char *const KW6 = "RETURN_TK";
-const char *const KW7 = "CIN_TK";
-const char *const KW8 = "COUT_TK";
-const char *const KW9 = "TAPE_TK";
-const char *const KW10 = "JUMP_TK";
-const char *const KW11 = "IF_TK";
-const char *const KW12 = "THEN_TK";
-const char *const KW13 = "PICK_TK";
-const char *const KW14 = "CREATE_TK";
-const char *const KW15 = "SET_TK";
-const char *const KW16 = "FUNC_TK";
-
 const char *const OPERATOR = "OPERATOR_TK";
 
-const char *const keyWords[] = {
+const char* keyWords[] = {
         "start", "stop", "while", "repeat", "until", "label", "return",
         "cin", "cout", "tape", "jump", "if", "then", "pick", "create",
         "set", "func"
 };
+
+int isKeyWord(char* word){
+        int x;
+        for(x = 0; x < 17; x++){
+                //printf("|%s| compared to |%s|: %d \n", word, keyWords[x],strcmp(word,keyWords[x]));
+                if(strcmp(word,keyWords[x]) == 0){
+                        return x;
+                }
+        }
+        return -1;
+}
+//add array of token names for keywords
 
 const int FSATABLE[][26] = {
 //       =        <        >        :        ;        +        -        *        /        ^        .        (        )        ,        {        }        [        ]        |        &        !        a-Z      0-9      _        /n       EOF
@@ -72,6 +100,123 @@ const int FSATABLE[][26] = {
 };
 
 
-void testFunction(){
-        printf("%d\n", FSATABLE[0][0]);
+void filter(FILE *dirtyfile, FILE *cleanfile){
+        char buffer[1024];
+        while(fgets(buffer, sizeof(buffer), dirtyfile) != NULL){
+                char *commentPosition = strstr(buffer, "//");
+                if(commentPosition != NULL){
+                        *commentPosition = '\n';
+                        *(commentPosition + 1) = '\0';
+                }
+                fputs(buffer, cleanfile);
+        }
+}
+
+void scanner(FILE *file){
+
+        char ch;
+        int index = 0;
+        char word[256];
+
+        int lineNum = 1;
+        int charNum = 0;
+        int startPosition = 0;
+
+        int state = 0;
+        int previousState = 0;
+
+        while(ch = fgetc(file)){
+                //printf("Char: %c, State: %d \n", ch, state);
+                charNum++;
+                if(ch == ' ' || ch == '\t'){
+                        //dont do shit
+                }else{
+                        previousState = -1;
+                        if(ch == EOF){
+                                state = FSATABLE[state][25];
+                        }else if(ch == '\n'){
+                                previousState = state;
+                                state = FSATABLE[state][24];
+                                lineNum++;
+                                charNum = 0;
+                        }else if(ch == '_'){
+                                previousState = state;
+                                state = FSATABLE[state][23];
+                        }else if(isdigit(ch)){
+                                previousState = state;
+                                state = FSATABLE[state][22];
+                        }else if(isalpha(ch)){
+                                previousState = state;
+                                state = FSATABLE[state][21];
+                        }else if(isSpecialChar(ch) != -1){
+                                previousState = state;
+                                state = FSATABLE[state][isSpecialChar(ch)];
+                                //printf("State: %d \n", state);
+                                //printf("Special Character Column: %d \n", isSpecialChar(ch));
+                        }else{
+                                state = ERROR_TK;
+                        }
+                        if(state < 10){
+                                if(state > 0){
+                                        if(index == 0){
+                                                startPosition = charNum;
+                                        }
+                                        word[index++] = ch;
+                                }
+                        }else if(state == ERROR_TK){
+                                printf("ERROR_TK reached, %d.%d\n", lineNum, charNum);
+                                if(previousState == S1){
+                                        printf("No Identifier, Integer, or Operator starts with %c\n", ch);
+                                }else if(previousState == S7){
+                                        printf("Expected '|' got '%c'\n", ch);
+                                }else if(previousState == S8){
+                                        printf("Expected '&' got '%c'\n", ch);
+                                }else if(previousState == S5){
+                                        printf("Expected '=' got '%c'\n", ch);
+                                }else{
+                                        printf("Invalid Char '%c'\n", ch);
+                                }
+                                break;
+                        }else if(state != EOF_TK){
+                                if((previousState == S4 && ch == '=') || (previousState == S5 && ch == '=') || (previousState == S6 && ch == '=') || (previousState == S7 && ch == '|') || (previousState == S8 && ch == '&')){
+                                        word[index] = ch;
+                                }else if(previousState != S4 && state == OP_TK && ch != '\n' && ch != '=' && ch != ':' && ch != '|' && ch != '&' && !(isdigit(ch)) && !(isalpha(ch))){
+                                        word[index] = ch;
+                                        startPosition++;
+                                }else if(state == IDENT_TK){
+                                        word[index] = '\0';
+                                        if(isKeyWord(word) > -1){
+                                                state = KW_TK;
+                                                fseek(file, -1, SEEK_CUR);
+                                                if(ch == '\n'){
+                                                        lineNum--;
+                                                }
+                                                charNum--;
+                                        }else{
+                                                if(ch == '\n'){
+                                                        lineNum--;
+                                                }
+                                                fseek(file, -1, SEEK_CUR);
+                                                charNum--;
+                                        }
+                                }else{
+                                        fseek(file, -1, SEEK_CUR);
+                                        if(ch == '\n'){
+                                                lineNum--;
+                                        }
+                                        charNum--;
+                                }
+                                printToken(state, word, lineNum, startPosition);
+                                //printf("State: %d ,Token: %s, at %d.%d\n", state, word, lineNum, startPosition);
+                                state = 0;
+                                index = 0;
+                                memset(word, '\0', sizeof(word));
+                        }else{
+                                lineNum--;
+                                printToken(state, word, lineNum, startPosition);
+                                //printf("State: %d ,Token: %s, at %d.%d\n", state, word, lineNum, startPosition);
+                                break;
+                        }
+                }
+        }
 }
